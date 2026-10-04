@@ -1,0 +1,59 @@
+package kr.sesac.wordcounter.analyzer;
+
+import kr.sesac.wordcounter.result.AnalysisResult;
+import kr.sesac.wordcounter.parser.*;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class FileAnalyzer {
+    ParserFactory parserFactory;
+
+    public void startAnalyze(Path filePath, AnalysisResult result){
+        parserFactory = new ParserFactory();
+
+        try {
+            // 파일 하나인지
+            if (Files.isRegularFile(filePath)) {
+                processFile(filePath, result);
+                // 폴더인지
+            } else if (Files.isDirectory(filePath)) {
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(filePath)) {
+                    for (Path entry : stream) {
+                        if (Files.isRegularFile(entry)) {
+                            processFile(entry, result);
+                        }
+                    }
+                }
+            }
+        }catch (IOException e){
+            System.out.println("경로 접근 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    // FileAnalyzer
+    private void processFile(Path filePath, AnalysisResult result) {
+        result.attemptIncrease();
+
+        FileParser parser = parserFactory.parserGuess(filePath);
+        if (parser == null) {
+            result.skipIncrease();
+            return;
+        }
+
+        try {
+            String text = parser.parse(filePath);
+            for (String token : Tokenizer.tokenize(text)) {
+                result.addWordCount(token, 1);
+            }
+            result.successIncrease();
+        } catch (FileParseException | IOException | UncheckedIOException e) {
+            String message = (e.getCause() != null) ? e.getCause().getMessage() : e.getMessage();
+            result.failIncrease();
+            result.addFailMessage(filePath.getFileName() + ": " + message);
+        }
+    }
+}
