@@ -4,7 +4,9 @@ import java.nio.file.Path;
 
 public class ParserFactory {
 
-    public FileParser parserGuess(Path filePath){
+    // [수정] parserGuess -> getParser : 확장자 기준으로 '선택'하는 동작이므로
+    // 지원하지 않는 확장자면 null을 반환한다.
+    public FileParser getParser(Path filePath){
         String fileName = filePath.getFileName().toString().toLowerCase();
 
         FileParser parser = null;
